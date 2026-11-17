@@ -346,8 +346,8 @@ function renderMethod() {
   let note;
   if (isOnline(m)) note = money(base) + " for the boxes plus a " + money(fee) + " processing fee. Your purchase is confirmed as soon as you pay.";
   else if (m === "zelle") note = "Send " + money(base) + " by Zelle to " + CONFIG.zelle + " with your reference number in the memo. We'll show you the reference next.";
-  else if (m === "check") note = "Make arrangements to deliver a check for " + money(base) + (CONFIG.checksPayableTo ? ", payable to " + CONFIG.checksPayableTo + "," : "") + " to " + player + "'s family. Your purchase is confirmed when they report receiving it.";
-  else note = "Make arrangements to deliver " + money(base) + " in cash to " + player + "'s family. Your purchase is confirmed when they report receiving it.";
+  else if (m === "check") note = "Make arrangements to deliver a check for " + money(base) + (CONFIG.checksPayableTo ? ", payable to " + CONFIG.checksPayableTo + "," : "") + " to Max or his family. Your purchase is confirmed when they report receiving it.";
+  else note = "Make arrangements to deliver " + money(base) + " in cash to Max or his family. Your purchase is confirmed when they report receiving it.";
   if (isOnline(m) && paypalReady && !ppRendered[m]) note = LABEL[m][0].toUpperCase() + LABEL[m].slice(1) + " isn't available on this device or browser. Please choose another way to pay.";
   $("pay-note").textContent = note;
   const showPP = isOnline(m) && paypalReady;
@@ -482,7 +482,7 @@ function showDone(m, res) {
     const what = m === "check" ? "check" : "cash";
     $("done-title").textContent = "Boxes held. Now arrange payment";
     $("done-amount").textContent = money(res.amount);
-    para(steps, "Please make arrangements to deliver your " + what + " to " + res.player + "'s family. Your purchase will be confirmed when they report receiving it.");
+    para(steps, "Please make arrangements to deliver your " + what + " to Max or his family. Your purchase will be confirmed when they report receiving it.");
     if (m === "check" && CONFIG.checksPayableTo) para(steps, "Make the check payable to " + CONFIG.checksPayableTo + ".");
     para(steps, m === "check" ? "Write your reference on the check's memo line:" : "Write your reference on the envelope:");
     copyLine(steps, res.reference);
