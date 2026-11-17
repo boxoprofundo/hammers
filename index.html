@@ -354,7 +354,7 @@ function renderMethod() {
   $("paypal-wrap").hidden = !showPP;
   ONLINE.forEach((k) => { $("pp-" + k).hidden = k !== m; });
   $("submit").hidden = showPP;
-  $("submit").textContent = isOnline(m) ? "Pay with " + LABEL[m] : "Reserve my boxes";
+  $("submit").textContent = isOnline(m) ? "Reserve and pay with " + LABEL[m] : "Reserve my boxes";
 }
 $("signup").addEventListener("change", (ev) => { if (ev.target.name === "method") renderQty(); });
 
