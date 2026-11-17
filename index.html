@@ -110,6 +110,11 @@
     border: 1.5px solid var(--line); border-radius: 6px; padding: 12px;
   }
   .pay input { width: 18px; height: 18px; accent-color: var(--black); margin: 0; }
+  .pay label.wide { grid-column: 1 / -1; }
+  .pay label span { display: grid; gap: 1px; }
+  .pay label small { font-weight: 400; font-size: 13px; color: var(--grey); }
+  .pay-note { margin: 2px 0 0; }
+  #paypal-wrap { min-height: 50px; }
   .pay label:has(input:checked) { border-color: var(--orange); background: #fff8ea; box-shadow: inset 0 0 0 1px var(--orange); }
 
   .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
@@ -228,11 +233,11 @@
         <fieldset>
           <legend>How will you pay?</legend>
           <div class="pay">
-            <label><input type="radio" name="method" value="Venmo" checked> Venmo</label>
-            <label><input type="radio" name="method" value="PayPal"> PayPal</label>
-            <label><input type="radio" name="method" value="Zelle"> Zelle</label>
-            <label><input type="radio" name="method" value="Cash or check"> Cash or check</label>
+            <label><input type="radio" name="method" value="online" checked> <span>Pay online<small>PayPal, Venmo or card</small></span></label>
+            <label><input type="radio" name="method" value="zelle"> <span>Zelle</span></label>
+            <label class="wide"><input type="radio" name="method" value="cash"> <span>Cash or check<small>Delivered to the player's family</small></span></label>
           </div>
+          <p class="hint pay-note" id="pay-note"></p>
         </fieldset>
 
         <div class="field">
@@ -246,15 +251,18 @@
         </div>
 
         <p class="error" id="error" role="alert"></p>
+        <div id="paypal-wrap" hidden>
+          <div id="paypal-buttons"></div>
+        </div>
         <button class="primary" id="submit" type="submit">Reserve my boxes</button>
       </form>
 
       <div class="done" id="done" hidden>
         <div class="ref" id="done-ref"></div>
-        <h2 style="margin:0">You're in. Now send your payment.</h2>
+        <h2 style="margin:0" id="done-title"></h2>
         <div class="bignum" id="done-amount"></div>
         <div id="pay-steps" class="done" style="animation:none"></div>
-        <p class="hint" id="done-after">Your boxes are reserved and count once the team receives your payment. The names and numbers will be entered in the squares at random, and final boards will be distributed on Thursday, November 26, 2026.</p>
+        <p class="hint">The names and numbers will be entered in the squares at random, and final boards will be distributed on Thursday, November 26, 2026.</p>
         <a class="btn alt" href="#" id="again">Sign up someone else</a>
       </div>
     </section>
@@ -268,6 +276,12 @@
         <li>The names and numbers will be entered in the squares at random.</li>
         <li>Final boards will be distributed on Thursday, November 26, 2026.</li>
         <li>Payment will be awarded within 48 hours of the end of the game.</li>
+      </ul>
+      <h3 class="sub">Paying</h3>
+      <ul class="rules">
+        <li>Online payments by PayPal, Venmo or card add a processing fee of <span class="fee-per-box">$1</span> per box and are confirmed right away.</li>
+        <li>Zelle payments go to mike@mikeboxer.com. Put your reference number in the memo and your purchase is confirmed when the payment arrives.</li>
+        <li>For cash or check, make arrangements to deliver it to the player's family. Your purchase is confirmed when they report receiving it.</li>
       </ul>
       <h3 class="sub">Prize distribution</h3>
       <div class="payouts">
@@ -285,39 +299,58 @@
 <footer><div class="wrap"><a href="https://www.nyhammers.com/">nyhammers.com</a> · Questions? <span id="contact"></span></div></footer>
 
 <script>
-/* ---------- Settings: fill these in ---------- */
+/* ---------- Settings ---------- */
 const CONFIG = {
   // The Apps Script web app URL (ends in /exec). Leave empty to run in preview mode.
   apiUrl: "https://script.google.com/macros/s/AKfycbyt_hwYe2ZycOXZhySjPxMBeI5r6OHsvTGWYKKlS1Fwh5N5q4F62nqxeMn2Q91V-E8m/exec",
-  venmo: "",          // Venmo username, without the @
-  paypal: "",         // paypal.me name, e.g. "MikeBoxer" for paypal.me/MikeBoxer
-  zelle: "",          // phone or email registered with Zelle
-  zelleName: "",      // the name Zelle shows for that account
-  checksPayableTo: "",// who checks are made out to
-  cashCheckNote: "Hand it to Coach or any team parent at practice.",
+  zelle: "mike@mikeboxer.com",
   contact: "",        // shown in the footer, e.g. an email address
-  price: 20           // fallback until the sheet answers
+  price: 20,          // fallbacks until the sheet answers
+  feePerBox: 1
 };
-/* --------------------------------------------- */
+/* ------------------------------ */
 
 const $ = (id) => document.getElementById(id);
-const money = (n) => "$" + Number(n).toLocaleString("en-US");
-let price = CONFIG.price, left = 100, qty = 1;
+const money = (n) => "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 });
 const PREVIEW_PLAYERS = ["Max Boxer", "Michael Chin", "Owen Huber", "Zachary Liu", "Lukas Mariano", "Dylan McGeough", "Yadi Molina", "Matthew Pineda", "Jayden Williams"];
+let price = CONFIG.price, feePerBox = CONFIG.feePerBox, left = 100, qty = 1;
+let paypalReady = false, lastReference = "";
 
 $("contact").textContent = CONFIG.contact || "Ask any Hammers coach or team parent.";
+document.querySelectorAll(".fee-per-box").forEach((e) => { e.textContent = money(feePerBox); });
+
+function method() { return $("signup").elements.namedItem("method").value; }
 
 function renderQty() {
   const cap = Math.max(1, left);
   if (qty > cap) qty = cap;
   if (qty < 1) qty = 1;
   $("qty").textContent = qty;
-  $("total").textContent = money(qty * price);
+  const base = qty * price, fee = qty * feePerBox;
+  $("total").textContent = method() === "online" ? money(base + fee) : money(base);
   $("minus").disabled = qty <= 1;
   $("plus").disabled = qty >= cap;
+  renderMethod();
 }
 $("minus").onclick = () => { qty--; renderQty(); };
 $("plus").onclick = () => { qty++; renderQty(); };
+
+function renderMethod() {
+  const m = method();
+  const base = qty * price, fee = qty * feePerBox;
+  const player = $("player").value || "the player";
+  const note = {
+    online: money(base) + " for the boxes plus a " + money(fee) + " processing fee. Your purchase is confirmed as soon as you pay.",
+    zelle: "Send " + money(base) + " by Zelle to " + CONFIG.zelle + " with your reference number in the memo. We'll show you the reference next.",
+    cash: "Make arrangements to deliver " + money(base) + " in cash or check to " + player + "'s family. Your purchase is confirmed when they report receiving it."
+  }[m];
+  $("pay-note").textContent = note;
+  const online = m === "online" && paypalReady;
+  $("paypal-wrap").hidden = !online;
+  $("submit").hidden = online;
+  $("submit").textContent = m === "online" ? "Pay online" : "Reserve my boxes";
+}
+$("signup").addEventListener("change", (ev) => { if (ev.target.name === "method" || ev.target.id === "player") renderQty(); });
 
 function renderLeft() {
   $("chip-left").textContent = left === 1 ? "1 box left" : left + " boxes left";
@@ -343,6 +376,32 @@ function closeSignups() {
   $("signup").hidden = true;
 }
 
+function formData() {
+  const f = $("signup");
+  const el = (n) => f.elements.namedItem(n);
+  return {
+    name: el("name").value.trim(), email: el("email").value.trim(), phone: el("phone").value.trim(),
+    player: el("player").value, boxes: qty, notes: el("notes").value.trim(), website: el("website").value
+  };
+}
+
+/** Shows the first problem with the form and returns false, or returns true. */
+function validate(data) {
+  const err = $("error"); err.textContent = "";
+  const el = (n) => $("signup").elements.namedItem(n);
+  const fail = (msg, field) => { err.textContent = msg; el(field).focus(); return false; };
+  if (!data.name) return fail("Please enter your name.", "name");
+  if (!data.email && !data.phone) return fail("Please enter an email or a phone number.", "email");
+  if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) return fail("That email address doesn't look right.", "email");
+  if (!data.player) return fail("Please choose a player.", "player");
+  return true;
+}
+
+async function api(body) {
+  const r = await fetch(CONFIG.apiUrl, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(body) });
+  return r.json();
+}
+
 async function loadStatus() {
   if (!CONFIG.apiUrl) {
     $("preview-note").hidden = false;
@@ -353,103 +412,117 @@ async function loadStatus() {
   try {
     const r = await fetch(CONFIG.apiUrl, { method: "GET" });
     const s = await r.json();
-    price = s.price; left = s.left;
+    price = s.price; left = s.left; feePerBox = s.feePerBox ?? feePerBox;
+    document.querySelectorAll(".fee-per-box").forEach((e) => { e.textContent = money(feePerBox); });
     setPlayers(s.players || []);
     renderLeft(); renderQty();
     if (!s.open) closeSignups();
+    if (s.paypal && s.paypal.clientId && !paypalReady) loadPayPal(s.paypal.clientId);
   } catch (e) {
-    $("error").textContent = "We couldn't load the player list. Please refresh the page.";
+    $("error").textContent = "We couldn't load the sign-up form. Please refresh the page.";
   }
 }
 
-function payStep(method, amount, ref) {
-  const box = document.createDocumentFragment();
-  const p = (html) => { const el = document.createElement("p"); el.style.margin = "0"; el.innerHTML = html; box.appendChild(el); };
-  const copyLine = (text) => {
-    const d = document.createElement("div"); d.className = "copyline";
-    const c = document.createElement("code"); c.textContent = text; d.appendChild(c);
-    const b = document.createElement("button"); b.type = "button"; b.textContent = "Copy";
-    b.onclick = () => {
-      navigator.clipboard?.writeText(text).then(() => { b.textContent = "Copied"; }, () => {
-        const range = document.createRange(); range.selectNodeContents(c);
-        const sel = getSelection(); sel.removeAllRanges(); sel.addRange(range);
-      });
-    };
-    d.appendChild(b); box.appendChild(d);
-  };
-  const link = (href, label) => {
-    const a = document.createElement("a"); a.className = "btn"; a.href = href; a.target = "_blank"; a.rel = "noopener";
-    a.textContent = label; box.appendChild(a);
-  };
-  const note = "Hammers boxes " + ref;
+function loadPayPal(clientId) {
+  const sc = document.createElement("script");
+  sc.src = "https://www.paypal.com/sdk/js?client-id=" + encodeURIComponent(clientId) +
+    "&currency=USD&intent=capture&components=buttons&enable-funding=venmo,card&disable-funding=paylater";
+  sc.onload = renderPayPal;
+  sc.onerror = () => { $("pay-note").textContent = "Online payment didn't load. Refresh the page, or choose Zelle or cash or check."; };
+  document.head.appendChild(sc);
+}
 
-  if (method === "Venmo" && CONFIG.venmo) {
-    link("https://venmo.com/" + encodeURIComponent(CONFIG.venmo) + "?txn=pay&amount=" + amount + "&note=" + encodeURIComponent(note), "Pay " + money(amount) + " on Venmo");
-    p("Venmo <strong>@" + esc(CONFIG.venmo) + "</strong> and put this in the note:");
-    copyLine(note);
-  } else if (method === "PayPal" && CONFIG.paypal) {
-    link("https://www.paypal.com/paypalme/" + encodeURIComponent(CONFIG.paypal) + "/" + amount + "USD", "Pay " + money(amount) + " with PayPal");
-    p("Choose <strong>Friends and Family</strong> if PayPal asks, and add this note:");
-    copyLine(note);
-  } else if (method === "Zelle" && CONFIG.zelle) {
-    p("Open your bank's app, choose Zelle, and send " + money(amount) + " to:");
-    copyLine(CONFIG.zelle);
-    if (CONFIG.zelleName) p("It should show the name <strong>" + esc(CONFIG.zelleName) + "</strong>.");
-    p("Put this in the memo:"); copyLine(note);
-  } else if (method === "Cash or check") {
-    p(esc(CONFIG.cashCheckNote));
-    if (CONFIG.checksPayableTo) p("Make checks payable to <strong>" + esc(CONFIG.checksPayableTo) + "</strong>.");
-    p("Write this on the envelope or the memo line:"); copyLine(note);
+function renderPayPal() {
+  paypal.Buttons({
+    style: { layout: "vertical", color: "black", shape: "rect", label: "pay", height: 48 },
+    onClick: (data, actions) => (validate(formData()) ? actions.resolve() : actions.reject()),
+    createOrder: async () => {
+      const res = await api(Object.assign({ action: "createOrder" }, formData()));
+      if (!res.ok) { $("error").textContent = res.error || "We couldn't start the payment."; loadStatus(); throw new Error(res.error); }
+      lastReference = res.reference;
+      return res.orderID;
+    },
+    onApprove: async (data, actions) => {
+      $("error").textContent = "Confirming your payment…";
+      const res = await api({ action: "captureOrder", orderID: data.orderID });
+      if (res.declined) { $("error").textContent = res.error; return actions.restart(); }
+      if (!res.ok) { $("error").textContent = res.error || "The payment didn't go through."; return; }
+      $("error").textContent = "";
+      showDone("online", res);
+    },
+    onCancel: () => { $("error").textContent = "Payment cancelled. Your boxes aren't reserved until you pay."; },
+    onError: () => { if (!$("error").textContent) $("error").textContent = "Something went wrong with the payment. Please try again."; }
+  }).render("#paypal-buttons").then(() => { paypalReady = true; renderMethod(); });
+}
+
+function copyLine(box, text) {
+  const d = document.createElement("div"); d.className = "copyline";
+  const c = document.createElement("code"); c.textContent = text; d.appendChild(c);
+  const b = document.createElement("button"); b.type = "button"; b.textContent = "Copy";
+  b.onclick = () => {
+    navigator.clipboard?.writeText(text).then(() => { b.textContent = "Copied"; }, () => {
+      const range = document.createRange(); range.selectNodeContents(c);
+      const sel = getSelection(); sel.removeAllRanges(); sel.addRange(range);
+    });
+  };
+  d.appendChild(b); box.appendChild(d);
+}
+function para(box, text) { const el = document.createElement("p"); el.style.margin = "0"; el.textContent = text; box.appendChild(el); }
+
+function showDone(m, res) {
+  left = res.left; renderLeft();
+  $("done-ref").textContent = "Reference " + res.reference + " · " + res.boxes + (res.boxes === 1 ? " box" : " boxes") + " for " + res.player;
+  const steps = $("pay-steps"); steps.innerHTML = "";
+  if (m === "online") {
+    $("done-title").textContent = "Paid. Thank you!";
+    $("done-amount").textContent = money(res.amount + (res.fee || 0));
+    para(steps, "Your purchase is confirmed. PayPal will email you a receipt.");
+  } else if (m === "zelle") {
+    $("done-title").textContent = "Now send your Zelle payment";
+    $("done-amount").textContent = money(res.amount);
+    para(steps, "Open your bank's app, choose Zelle, and send " + money(res.amount) + " to:");
+    copyLine(steps, CONFIG.zelle);
+    para(steps, "Put this in the memo so we can match your payment:");
+    copyLine(steps, res.reference);
+    para(steps, "Your purchase is confirmed when the payment arrives.");
   } else {
-    p("The team will send you " + esc(method) + " payment details. Please include this reference:");
-    copyLine(note);
+    $("done-title").textContent = "Boxes held. Now arrange payment";
+    $("done-amount").textContent = money(res.amount);
+    para(steps, "Please make arrangements to deliver your cash or check to " + res.player + "'s family. Your purchase will be confirmed when they report receiving it.");
+    para(steps, "Write your reference on the envelope or the check's memo line:");
+    copyLine(steps, res.reference);
   }
-  return box;
+  $("signup").hidden = true; $("done").hidden = false;
+  $("signup-card").scrollIntoView({ behavior: "smooth", block: "start" });
 }
-function esc(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 
 $("signup").addEventListener("submit", async (ev) => {
   ev.preventDefault();
-  const f = ev.target;
-  const el = (n) => f.elements.namedItem(n);
-  const data = {
-    name: el("name").value.trim(), email: el("email").value.trim(), phone: el("phone").value.trim(),
-    player: el("player").value, boxes: qty, method: el("method").value, notes: el("notes").value.trim(), website: el("website").value
-  };
-  const err = $("error"); err.textContent = "";
-  if (!data.name) { err.textContent = "Please enter your name."; el("name").focus(); return; }
-  if (!data.email && !data.phone) { err.textContent = "Please enter an email or a phone number."; el("email").focus(); return; }
-  if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) { err.textContent = "That email address doesn't look right."; el("email").focus(); return; }
-  if (!data.player) { err.textContent = "Please choose a player."; el("player").focus(); return; }
-
-  const btn = $("submit"); btn.disabled = true; btn.textContent = "Saving…";
+  const m = method();
+  const data = formData();
+  if (!validate(data)) return;
+  const btn = $("submit");
+  if (m === "online" && !paypalReady && CONFIG.apiUrl) { $("error").textContent = "Online payment is still loading. Try again in a moment, or choose Zelle or cash or check."; return; }
+  btn.disabled = true; btn.textContent = "Saving…";
   let res;
   try {
     if (!CONFIG.apiUrl) {
-      res = { ok: true, reference: "HAM-PREVIEW", amount: qty * price, boxes: qty, player: data.player, left: left - qty };
+      res = { ok: true, reference: "HAM-PREVIEW", amount: qty * price, fee: m === "online" ? qty * feePerBox : 0, boxes: qty, player: data.player, left: left - qty };
     } else {
-      const r = await fetch(CONFIG.apiUrl, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(data) });
-      res = await r.json();
+      res = await api(Object.assign({ action: m === "zelle" ? "reserveZelle" : "reserveCash" }, data));
     }
   } catch (e) {
     res = { ok: false, error: "We couldn't reach the sign-up sheet. Check your connection and try again." };
   }
-  btn.disabled = false; btn.textContent = "Reserve my boxes";
-  if (!res.ok) { err.textContent = res.error || "Something went wrong. Please try again."; loadStatus(); return; }
-
-  left = res.left; renderLeft(); renderQty();
-  $("done-ref").textContent = "Reference " + res.reference + " · " + res.boxes + (res.boxes === 1 ? " box" : " boxes") + " for " + res.player;
-  $("done-amount").textContent = money(res.amount);
-  const steps = $("pay-steps"); steps.innerHTML = "";
-  steps.appendChild(payStep(data.method, res.amount, res.reference));
-  f.hidden = true; $("done").hidden = false;
-  $("signup-card").scrollIntoView({ behavior: "smooth", block: "start" });
+  btn.disabled = false; renderMethod();
+  if (!res.ok) { $("error").textContent = res.error || "Something went wrong. Please try again."; loadStatus(); return; }
+  showDone(m, res);
 });
 
 $("again").addEventListener("click", (ev) => {
   ev.preventDefault();
   const f = $("signup"); f.reset(); qty = 1; renderQty();
-  $("done").hidden = true;
+  $("done").hidden = true; $("error").textContent = "";
   if (left > 0) f.hidden = false; else closeSignups();
 });
 

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hammers Family Page</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="img/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&display=swap">
+<style>
+  /* Matches nyhammers.com: white masthead with logos, black-and-white pinstripes,
+     black page, Oswald headings over Helvetica, orange for the active/selected state.
+     One look in every theme, so colors are set explicitly rather than per scheme. */
+  :root {
+    --black: #080808;
+    --white: #ffffff;
+    --silver: #bcb9af;
+    --grey: #5d5d61;
+    --line: #d7d5ce;
+    --paper: #f4f3ef;
+    --orange: #f1a41d;
+    --orange-deep: #a16d13;
+    --red: #e84a43;
+    --ok: #1d7a3a;
+    --focus: #116dff;
+    --head: "Oswald", "Arial Narrow", Impact, sans-serif;
+    --body: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { -webkit-text-size-adjust: 100%; background: var(--black); }
+  body {
+    margin: 0; background: var(--black); color: var(--black);
+    font: 17px/1.5 var(--body);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .wrap {
+    max-width: 560px; margin: 0 auto;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+
+  /* Masthead: white logo bar, pinstripe band, black title block */
+  .logobar { background: var(--white); padding-top: env(safe-area-inset-top, 0px); }
+  .logobar .wrap { display: flex; align-items: center; gap: 12px; padding-block: 10px; }
+  .logobar .plate { height: 64px; width: auto; }
+  .logobar .wordmark { display: grid; gap: 0; min-width: 0; }
+  .logobar .wordmark img { height: 46px; width: auto; max-width: 100%; display: block; }
+  .logobar .wordmark span { font: 500 13px/1 var(--head); letter-spacing: .18em; text-transform: uppercase; color: var(--black); padding-left: 4px; }
+  .logobar .ball { height: 52px; width: auto; margin-left: auto; }
+  .pinstripes {
+    height: 34px; background: var(--white);
+    background-image: repeating-linear-gradient(90deg, var(--white) 0 30px, var(--black) 30px 38px);
+    border-bottom: 3px solid var(--black);
+  }
+  .titleblock { background: var(--black); color: var(--white); }
+  .titleblock .wrap { padding-block: 26px 8px; display: grid; gap: 10px; }
+  .eyebrow { font: 500 14px/1 var(--head); letter-spacing: .16em; text-transform: uppercase; color: var(--orange); }
+  h1 { font: 700 clamp(32px, 9vw, 48px)/1.05 var(--head); margin: 0; text-transform: uppercase; letter-spacing: .01em; text-wrap: balance; }
+  .matchup { font: italic 500 18px/1.35 var(--head); letter-spacing: .04em; margin: 0; }
+  .lede { margin: 0; max-width: 46ch; color: #d9d7d0; }
+  .tally { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+  .chip {
+    font: 500 15px/1 var(--head); letter-spacing: .08em; text-transform: uppercase;
+    border: 1.5px solid var(--silver); border-radius: 999px; padding: 7px 12px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  main .wrap { padding-block: 18px 36px; display: grid; gap: 18px; }
+  .card { background: var(--white); border-radius: 6px; padding: 22px 20px; border-top: 5px solid var(--orange); }
+  h2 { font: 600 24px/1.15 var(--head); letter-spacing: .03em; text-transform: uppercase; margin: 0 0 14px; }
+
+  .notice { border-radius: 6px; padding: 12px 14px; background: #fff3d6; color: #5b3e00; font-size: 15px; margin: 0; }
+
+  form { display: grid; gap: 16px; }
+  .field { display: grid; gap: 6px; min-width: 0; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 440px) { .row2 { grid-template-columns: 1fr; } }
+  label, legend { font-weight: 700; font-size: 15px; }
+  .hint { color: var(--grey); font-size: 14px; font-weight: 400; }
+  input[type=text], input[type=email], input[type=tel], select, textarea {
+    font: inherit; color: var(--black); background: var(--white);
+    border: 1.5px solid var(--line); border-radius: 6px; padding: 11px 12px; width: 100%;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--black); }
+  textarea { min-height: 64px; resize: vertical; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  .qty { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .stepper { display: inline-flex; border: 1.5px solid var(--black); border-radius: 6px; overflow: hidden; }
+  .stepper button {
+    width: 48px; height: 48px; border: 0; background: var(--white); color: var(--black);
+    font: 700 24px/1 var(--body); cursor: pointer;
+  }
+  .stepper button:disabled { opacity: .3; cursor: default; }
+  .stepper output {
+    min-width: 56px; display: grid; place-items: center; font: 600 26px/1 var(--head);
+    border-inline: 1.5px solid var(--black); font-variant-numeric: tabular-nums;
+  }
+  .total { font: 600 26px/1 var(--head); font-variant-numeric: tabular-nums; }
+
+  fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; min-width: 0; }
+  .pay { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pay label {
+    display: flex; align-items: center; gap: 10px; font-weight: 700; cursor: pointer;
+    border: 1.5px solid var(--line); border-radius: 6px; padding: 12px;
+  }
+  .pay input { width: 18px; height: 18px; accent-color: var(--black); margin: 0; }
+  .pay label.wide { grid-column: 1 / -1; }
+  .pay label span { display: grid; gap: 1px; }
+  .pay label small { font-weight: 400; font-size: 13px; color: var(--grey); }
+  .pay-note { margin: 2px 0 0; }
+  #paypal-wrap { min-height: 50px; }
+  .pay label:has(input:checked) { border-color: var(--orange); background: #fff8ea; box-shadow: inset 0 0 0 1px var(--orange); }
+
+  .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+  button.primary, a.btn {
+    display: inline-flex; justify-content: center; align-items: center; gap: 8px;
+    font: 600 20px/1 var(--head); letter-spacing: .08em; text-transform: uppercase; text-decoration: none;
+    background: var(--black); color: var(--white); border: 0; border-radius: 6px;
+    padding: 16px 18px; cursor: pointer; width: 100%;
+    box-shadow: inset 0 -4px 0 var(--orange);
+  }
+  button.primary:hover, a.btn:hover { background: #222; }
+  button.primary:disabled { opacity: .6; cursor: progress; }
+  a.btn.alt { background: var(--white); color: var(--black); border: 1.5px solid var(--black); box-shadow: none; }
+  .error { color: #c0261f; font-weight: 700; min-height: 1.2em; margin: 0; }
+
+  .done { display: grid; gap: 14px; }
+  .ref { font: 500 15px/1 var(--head); letter-spacing: .12em; text-transform: uppercase; color: var(--grey); }
+  .bignum { font: 700 52px/1 var(--head); color: var(--black); font-variant-numeric: tabular-nums; }
+  .copyline {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    border: 1.5px dashed var(--silver); border-radius: 6px; padding: 10px 12px; background: var(--paper);
+  }
+  .copyline code { font: 600 17px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; user-select: all; overflow-wrap: anywhere; }
+  .copyline button { margin-left: auto; font: 700 14px var(--body); border: 1px solid var(--black); background: var(--white); color: var(--black); border-radius: 6px; padding: 6px 10px; cursor: pointer; }
+
+  .payouts { display: grid; grid-template-columns: repeat(4, 1fr); border: 1.5px solid var(--black); border-radius: 6px; overflow: hidden; }
+  .payouts div { padding: 10px 6px; text-align: center; border-left: 1.5px solid var(--black); }
+  .payouts div:first-child { border-left: 0; }
+  .payouts div:last-child { background: var(--black); color: var(--white); }
+  .payouts div:last-child span { color: var(--silver); }
+  .payouts b { display: block; font: 600 24px/1.1 var(--head); font-variant-numeric: tabular-nums; }
+  .payouts span { font-size: 13px; color: var(--grey); }
+  .example { margin: 12px 0 0; color: var(--grey); font-size: 15px; }
+  .example strong { color: var(--black); }
+  ul.rules { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+  h3.sub { font: 600 18px/1.2 var(--head); letter-spacing: .04em; text-transform: uppercase; margin: 18px 0 10px; }
+  .payouts span { font-size: 12px; }
+
+  footer { color: var(--silver); font-size: 14px; text-align: center; padding-block: 0 32px; }
+  footer a { color: var(--orange); }
+  @media (prefers-reduced-motion: no-preference) { .done { animation: rise .35s ease-out; } }
+  @keyframes rise { from { transform: translateY(6px); opacity: .4; } to { transform: none; opacity: 1; } }
+  .sale { border-top: 1px solid var(--line); padding-block: 14px; display: grid; gap: 8px; }
+  .sale:first-of-type { border-top: 0; padding-top: 0; }
+  .sale-top { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+  .sale-name { font-weight: 700; font-size: 18px; }
+  .sale-amt { font: 600 22px/1 var(--head); font-variant-numeric: tabular-nums; }
+  .sale-meta { color: var(--grey); font-size: 14px; overflow-wrap: anywhere; }
+  .sale-meta a { color: var(--black); }
+  .pill { display: inline-block; font: 500 13px/1 var(--head); letter-spacing: .08em; text-transform: uppercase; padding: 6px 9px; border-radius: 999px; }
+  .pill.wait { background: #fff3d6; color: #5b3e00; }
+  .pill.ok { background: #e3f3e7; color: var(--ok); }
+  .sale button { font: 600 17px/1 var(--head); letter-spacing: .06em; text-transform: uppercase; border-radius: 6px; padding: 12px; cursor: pointer; }
+  .sale button.confirm { background: var(--black); color: var(--white); border: 0; box-shadow: inset 0 -4px 0 var(--orange); }
+  .sale button.undo { background: var(--white); color: var(--black); border: 1.5px solid var(--line); }
+  .sale button:disabled { opacity: .5; cursor: progress; }
+  .empty { color: var(--grey); margin: 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logobar">
+    <div class="wrap">
+      <img class="plate" src="img/ny-plate.png" alt="NY" width="203" height="192">
+      <div class="wordmark">
+        <img src="img/hammers-wordmark.png" alt="Hammers" width="371" height="126">
+        <span>Youth Baseball</span>
+      </div>
+      <img class="ball" src="img/ball-12u.png" alt="12U" width="192" height="192">
+    </div>
+  </div>
+  <div class="pinstripes" aria-hidden="true"></div>
+  <div class="titleblock">
+    <div class="wrap">
+      <div class="eyebrow">Thanksgiving Day Game Squares</div>
+      <h1 id="title">Family page</h1>
+      <p class="lede">These buyers chose to pay you by cash or check. When the money reaches you, tap <strong>Received</strong> and their purchase is confirmed.</p>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <section class="card" aria-labelledby="list-h">
+      <h2 id="list-h">Cash and check buyers</h2>
+      <p class="error" id="error" role="alert"></p>
+      <div id="list"><p class="empty">Loading…</p></div>
+    </section>
+    <p class="notice">Please keep this link private. Anyone with it can confirm payments for your player.</p>
+  </div>
+</main>
+
+<footer><div class="wrap"><a href="https://www.nyhammers.com/">nyhammers.com</a></div></footer>
+
+<script>
+const API = "https://script.google.com/macros/s/AKfycbyt_hwYe2ZycOXZhySjPxMBeI5r6OHsvTGWYKKlS1Fwh5N5q4F62nqxeMn2Q91V-E8m/exec";
+const key = new URLSearchParams(location.search).get("k") || "";
+const $ = (id) => document.getElementById(id);
+const money = (n) => "$" + Number(n).toLocaleString("en-US");
+
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+function render(v) {
+  if (!v.ok) { $("list").innerHTML = ""; $("error").textContent = v.error || "Something went wrong."; return; }
+  $("error").textContent = "";
+  $("title").textContent = v.player + "'s family page";
+  document.title = "Hammers · " + v.player;
+  const list = $("list"); list.innerHTML = "";
+  if (!v.signups.length) { list.appendChild(el("p", "empty", "No one has chosen cash or check for " + v.player + " yet. Check back after buyers sign up.")); return; }
+  const waiting = v.signups.filter((s) => !s.received).reduce((t, s) => t + s.amount, 0);
+  if (waiting) list.appendChild(el("p", "hint", "Waiting on " + money(waiting) + " in cash or checks."));
+  v.signups.forEach((s) => {
+    const row = el("div", "sale");
+    const top = el("div", "sale-top");
+    top.appendChild(el("span", "sale-name", s.name));
+    top.appendChild(el("span", "sale-amt", money(s.amount)));
+    row.appendChild(top);
+    const meta = el("div", "sale-meta");
+    meta.append(s.boxes + (s.boxes === 1 ? " box" : " boxes") + " · " + s.reference);
+    [[s.email, "mailto:"], [s.phone, "tel:"]].forEach(([val, scheme]) => {
+      if (!val) return;
+      meta.append(" · ");
+      const a = el("a", null, val); a.href = scheme + val; meta.appendChild(a);
+    });
+    row.appendChild(meta);
+    const status = el("span", "pill " + (s.received ? "ok" : "wait"), s.received ? "Received, purchase confirmed" : "Waiting for cash or check");
+    row.appendChild(status);
+    const b = el("button", s.received ? "undo" : "confirm", s.received ? "Undo: not received" : "Received " + money(s.amount));
+    b.type = "button";
+    b.onclick = () => mark(s.reference, !s.received, b);
+    row.appendChild(b);
+    list.appendChild(row);
+  });
+}
+
+async function load() {
+  if (!key) { render({ ok: false, error: "This link is missing its key. Ask the team for your family link." }); return; }
+  try {
+    const r = await fetch(API + "?action=family&k=" + encodeURIComponent(key));
+    render(await r.json());
+  } catch (e) { $("error").textContent = "Couldn't load the list. Check your connection and refresh."; }
+}
+
+async function mark(reference, received, btn) {
+  btn.disabled = true; btn.textContent = "Saving…";
+  try {
+    const r = await fetch(API, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "markReceived", k: key, reference, received }) });
+    render(await r.json());
+  } catch (e) { $("error").textContent = "Couldn't save. Check your connection and try again."; btn.disabled = false; }
+}
+
+load();
+</script>
+</body>
+</html>
