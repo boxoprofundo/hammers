@@ -295,7 +295,7 @@
   </div>
 </main>
 
-<footer><div class="wrap"><a href="https://www.nyhammers.com/">nyhammers.com</a> · Questions? <span id="contact"></span></div></footer>
+<footer><div class="wrap"><a href="https://www.nyhammers.com/">nyhammers.com</a> · Questions? <a href="mailto:mike@mikeboxer.com">mike@mikeboxer.com</a> · <a href="tel:+18456414939">(845) 641-4939</a></div></footer>
 
 <script>
 /* ---------- Settings ---------- */
@@ -303,21 +303,21 @@ const CONFIG = {
   // The Apps Script web app URL (ends in /exec). Leave empty to run in preview mode.
   apiUrl: "",
   zelle: "mike@mikeboxer.com",
-  checksPayableTo: "", // who checks are made out to
-  contact: "",        // shown in the footer, e.g. an email address
+  checksPayableTo: "Michael Boxer", // who checks are made out to
   price: 20,          // fallbacks until the sheet answers
-  feePerBox: 1
+  feePct: 3.49,       // PayPal fee; the online processing fee covers it
+  feeFixed: 0.49
 };
 /* ------------------------------ */
 
 const $ = (id) => document.getElementById(id);
-const money = (n) => "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 });
+const money = (n) => "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: Math.round(n * 100) % 100 ? 2 : 0, maximumFractionDigits: 2 });
 const PLAYER = "Max Boxer";
-let price = CONFIG.price, feePerBox = CONFIG.feePerBox, left = 100, qty = 1;
+let price = CONFIG.price, feePct = CONFIG.feePct, feeFixed = CONFIG.feeFixed, left = 100, qty = 1;
+/** Same rule as the sign-up script: the fee covers PayPal's whole cut. */
+function feeFor(base) { const gross = (base + feeFixed) / (1 - feePct / 100); return Math.ceil(Math.round((gross - base) * 10000) / 100) / 100; }
 let paypalReady = false, lastReference = "";
 
-$("contact").textContent = CONFIG.contact || "Ask any Hammers coach or team parent.";
-document.querySelectorAll(".fee-per-box").forEach((e) => { e.textContent = money(feePerBox); });
 
 function method() { return $("signup").elements.namedItem("method").value; }
 const ONLINE = ["venmo", "paypal", "card"];
@@ -330,7 +330,7 @@ function renderQty() {
   if (qty > cap) qty = cap;
   if (qty < 1) qty = 1;
   $("qty").textContent = qty;
-  const base = qty * price, fee = qty * feePerBox;
+  const base = qty * price, fee = feeFor(base);
   $("total").textContent = isOnline(method()) ? money(base + fee) : money(base);
   $("minus").disabled = qty <= 1;
   $("plus").disabled = qty >= cap;
@@ -341,7 +341,7 @@ $("plus").onclick = () => { qty++; renderQty(); };
 
 function renderMethod() {
   const m = method();
-  const base = qty * price, fee = qty * feePerBox;
+  const base = qty * price, fee = feeFor(base);
   const player = PLAYER;
   let note;
   if (isOnline(m)) note = money(base) + " for the boxes plus a " + money(fee) + " processing fee. Your purchase is confirmed as soon as you pay.";
@@ -399,8 +399,9 @@ async function loadStatus() {
   try {
     const r = await fetch(CONFIG.apiUrl, { method: "GET" });
     const s = await r.json();
-    price = s.price; left = s.left; feePerBox = s.feePerBox ?? feePerBox;
-    document.querySelectorAll(".fee-per-box").forEach((e) => { e.textContent = money(feePerBox); });
+    price = s.price; left = s.left;
+    if (typeof s.feePct === "number") feePct = s.feePct;
+    if (typeof s.feeFixed === "number") feeFixed = s.feeFixed;
     renderLeft(); renderQty();
     if (!s.open) closeSignups();
     if (s.paypal && s.paypal.clientId && !paypalReady) loadPayPal(s.paypal.clientId);
@@ -502,7 +503,7 @@ $("signup").addEventListener("submit", async (ev) => {
   let res;
   try {
     if (!CONFIG.apiUrl) {
-      res = { ok: true, reference: "HAM-PREVIEW", amount: qty * price, fee: isOnline(m) ? qty * feePerBox : 0, boxes: qty, player: data.player, left: left - qty };
+      res = { ok: true, reference: "HAM-PREVIEW", amount: qty * price, fee: isOnline(m) ? feeFor(qty * price) : 0, boxes: qty, player: data.player, left: left - qty };
     } else {
       res = await api(Object.assign({ action: m === "zelle" ? "reserveZelle" : "reserveCash", payWith: m === "check" ? "Check" : "Cash" }, data));
     }
