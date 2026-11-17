@@ -114,6 +114,7 @@
   .pay label span { display: grid; gap: 1px; }
   .pay label small { font-weight: 400; font-size: 13px; color: var(--grey); }
   .pay-note { margin: 2px 0 0; }
+  .for-player { margin: 0; padding: 12px 14px; background: var(--paper); border-left: 4px solid var(--orange); border-radius: 4px; }
   #paypal-wrap { min-height: 50px; }
   .pay label:has(input:checked) { border-color: var(--orange); background: #fff8ea; box-shadow: inset 0 0 0 1px var(--orange); }
 
@@ -181,7 +182,7 @@
       <p class="matchup">Kansas City Chiefs at Buffalo Bills · Thursday, November 26, 2026</p>
       <p class="lede">Please help support the NY Hammers 12U Baseball Team by buying an NFL Thanksgiving Day Game Square! Your contribution will help our travel baseball team participate in tournaments throughout our upcoming 2027 season.</p>
       <div class="tally" aria-live="polite">
-        <span class="chip" id="chip-left">100 boxes left</span>
+        <span class="chip">Supporting Max Boxer</span>
         <span class="chip">$20 a box · $1,000 in prizes</span>
       </div>
     </div>
@@ -214,8 +215,7 @@
         <p class="hint" style="margin:-8px 0 0">Give us an email or a phone number so we can send you the final board.</p>
 
         <div class="field">
-          <label for="player">Which player are you supporting?</label>
-          <select id="player" name="player" required></select>
+          <p class="for-player">Your boxes support <strong>Max Boxer</strong>.</p>
         </div>
 
         <div class="field">
@@ -235,7 +235,7 @@
           <div class="pay">
             <label><input type="radio" name="method" value="online" checked> <span>Pay online<small>PayPal, Venmo or card</small></span></label>
             <label><input type="radio" name="method" value="zelle"> <span>Zelle</span></label>
-            <label class="wide"><input type="radio" name="method" value="cash"> <span>Cash or check<small>Delivered to the player's family</small></span></label>
+            <label class="wide"><input type="radio" name="method" value="cash"> <span>Cash or check<small>Delivered to Max's family</small></span></label>
           </div>
           <p class="hint pay-note" id="pay-note"></p>
         </fieldset>
@@ -281,7 +281,7 @@
       <ul class="rules">
         <li>Online payments by PayPal, Venmo or card add a processing fee of <span class="fee-per-box">$1</span> per box and are confirmed right away.</li>
         <li>Zelle payments go to mike@mikeboxer.com. Put your reference number in the memo and your purchase is confirmed when the payment arrives.</li>
-        <li>For cash or check, make arrangements to deliver it to the player's family. Your purchase is confirmed when they report receiving it.</li>
+        <li>For cash or check, make arrangements to deliver it to Max Boxer's family. Your purchase is confirmed when they report receiving it.</li>
       </ul>
       <h3 class="sub">Prize distribution</h3>
       <div class="payouts">
@@ -312,7 +312,7 @@ const CONFIG = {
 
 const $ = (id) => document.getElementById(id);
 const money = (n) => "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 });
-const PREVIEW_PLAYERS = ["Max Boxer", "Michael Chin", "Owen Huber", "Zachary Liu", "Lukas Mariano", "Dylan McGeough", "Yadi Molina", "Matthew Pineda", "Jayden Williams"];
+const PLAYER = "Max Boxer";
 let price = CONFIG.price, feePerBox = CONFIG.feePerBox, left = 100, qty = 1;
 let paypalReady = false, lastReference = "";
 
@@ -338,7 +338,7 @@ $("plus").onclick = () => { qty++; renderQty(); };
 function renderMethod() {
   const m = method();
   const base = qty * price, fee = qty * feePerBox;
-  const player = $("player").value || "the player";
+  const player = PLAYER;
   const note = {
     online: money(base) + " for the boxes plus a " + money(fee) + " processing fee. Your purchase is confirmed as soon as you pay.",
     zelle: "Send " + money(base) + " by Zelle to " + CONFIG.zelle + " with your reference number in the memo. We'll show you the reference next.",
@@ -350,26 +350,9 @@ function renderMethod() {
   $("submit").hidden = online;
   $("submit").textContent = m === "online" ? "Pay online" : "Reserve my boxes";
 }
-$("signup").addEventListener("change", (ev) => { if (ev.target.name === "method" || ev.target.id === "player") renderQty(); });
+$("signup").addEventListener("change", (ev) => { if (ev.target.name === "method") renderQty(); });
 
-function renderLeft() {
-  $("chip-left").textContent = left === 1 ? "1 box left" : left + " boxes left";
-}
-
-function setPlayers(list) {
-  const sel = $("player");
-  const keep = sel.value;
-  sel.innerHTML = "";
-  const ph = document.createElement("option");
-  ph.value = ""; ph.textContent = "Choose a player"; ph.disabled = true; ph.selected = true;
-  sel.appendChild(ph);
-  list.forEach((name) => {
-    const o = document.createElement("option");
-    o.value = o.textContent = name;
-    sel.appendChild(o);
-  });
-  if (keep && list.includes(keep)) sel.value = keep;
-}
+function renderLeft() {}
 
 function closeSignups() {
   $("closed-note").hidden = false;
@@ -381,7 +364,7 @@ function formData() {
   const el = (n) => f.elements.namedItem(n);
   return {
     name: el("name").value.trim(), email: el("email").value.trim(), phone: el("phone").value.trim(),
-    player: el("player").value, boxes: qty, notes: el("notes").value.trim(), website: el("website").value
+    player: PLAYER, boxes: qty, notes: el("notes").value.trim(), website: el("website").value
   };
 }
 
@@ -393,7 +376,6 @@ function validate(data) {
   if (!data.name) return fail("Please enter your name.", "name");
   if (!data.email && !data.phone) return fail("Please enter an email or a phone number.", "email");
   if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) return fail("That email address doesn't look right.", "email");
-  if (!data.player) return fail("Please choose a player.", "player");
   return true;
 }
 
@@ -405,7 +387,6 @@ async function api(body) {
 async function loadStatus() {
   if (!CONFIG.apiUrl) {
     $("preview-note").hidden = false;
-    setPlayers(PREVIEW_PLAYERS);
     renderLeft(); renderQty();
     return;
   }
@@ -414,7 +395,6 @@ async function loadStatus() {
     const s = await r.json();
     price = s.price; left = s.left; feePerBox = s.feePerBox ?? feePerBox;
     document.querySelectorAll(".fee-per-box").forEach((e) => { e.textContent = money(feePerBox); });
-    setPlayers(s.players || []);
     renderLeft(); renderQty();
     if (!s.open) closeSignups();
     if (s.paypal && s.paypal.clientId && !paypalReady) loadPayPal(s.paypal.clientId);
