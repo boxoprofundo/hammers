@@ -305,17 +305,15 @@ const CONFIG = {
   zelle: "mike@mikeboxer.com",
   checksPayableTo: "Michael Boxer", // who checks are made out to
   price: 20,          // fallbacks until the sheet answers
-  feePct: 3.49,       // PayPal fee; the online processing fee covers it
-  feeFixed: 0.49
+  feePerBox: 1.25     // online processing fee per box (the sheet's setting wins)
 };
 /* ------------------------------ */
 
 const $ = (id) => document.getElementById(id);
 const money = (n) => "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: Math.round(n * 100) % 100 ? 2 : 0, maximumFractionDigits: 2 });
 const PLAYER = "Max Boxer";
-let price = CONFIG.price, feePct = CONFIG.feePct, feeFixed = CONFIG.feeFixed, left = 100, qty = 1;
-/** Same rule as the sign-up script: the fee covers PayPal's whole cut. */
-function feeFor(base) { const gross = (base + feeFixed) / (1 - feePct / 100); return Math.ceil(Math.round((gross - base) * 10000) / 100) / 100; }
+let price = CONFIG.price, feePerBox = CONFIG.feePerBox, left = 100, qty = 1;
+function feeFor(boxes) { return Math.round(boxes * feePerBox * 100) / 100; }
 let paypalReady = false, lastReference = "";
 
 
@@ -330,7 +328,7 @@ function renderQty() {
   if (qty > cap) qty = cap;
   if (qty < 1) qty = 1;
   $("qty").textContent = qty;
-  const base = qty * price, fee = feeFor(base);
+  const base = qty * price, fee = feeFor(qty);
   $("total").textContent = isOnline(method()) ? money(base + fee) : money(base);
   $("minus").disabled = qty <= 1;
   $("plus").disabled = qty >= cap;
@@ -341,7 +339,7 @@ $("plus").onclick = () => { qty++; renderQty(); };
 
 function renderMethod() {
   const m = method();
-  const base = qty * price, fee = feeFor(base);
+  const base = qty * price, fee = feeFor(qty);
   const player = PLAYER;
   let note;
   if (isOnline(m)) note = money(base) + " for the boxes plus a " + money(fee) + " processing fee. Your purchase is confirmed as soon as you pay.";
@@ -400,8 +398,7 @@ async function loadStatus() {
     const r = await fetch(CONFIG.apiUrl, { method: "GET" });
     const s = await r.json();
     price = s.price; left = s.left;
-    if (typeof s.feePct === "number") feePct = s.feePct;
-    if (typeof s.feeFixed === "number") feeFixed = s.feeFixed;
+    if (typeof s.feePerBox === "number") feePerBox = s.feePerBox;
     renderLeft(); renderQty();
     if (!s.open) closeSignups();
     if (s.paypal && s.paypal.clientId && !paypalReady) loadPayPal(s.paypal.clientId);
@@ -503,7 +500,7 @@ $("signup").addEventListener("submit", async (ev) => {
   let res;
   try {
     if (!CONFIG.apiUrl) {
-      res = { ok: true, reference: "HAM-PREVIEW", amount: qty * price, fee: isOnline(m) ? feeFor(qty * price) : 0, boxes: qty, player: data.player, left: left - qty };
+      res = { ok: true, reference: "HAM-PREVIEW", amount: qty * price, fee: isOnline(m) ? feeFor(qty) : 0, boxes: qty, player: data.player, left: left - qty };
     } else {
       res = await api(Object.assign({ action: m === "zelle" ? "reserveZelle" : "reserveCash", payWith: m === "check" ? "Check" : "Cash" }, data));
     }
