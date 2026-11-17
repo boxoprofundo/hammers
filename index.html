@@ -176,7 +176,7 @@
       <p class="matchup">Kansas City Chiefs at Buffalo Bills · Thursday, November 26, 2026</p>
       <p class="lede">Please help support the NY Hammers 12U Baseball Team by buying an NFL Thanksgiving Day Game Square! Your contribution will help our travel baseball team participate in tournaments throughout our upcoming 2027 season.</p>
       <div class="tally" aria-live="polite">
-        <span class="chip" id="chip-left">99 boxes left</span>
+        <span class="chip" id="chip-left">100 boxes left</span>
         <span class="chip">$20 a box · $1,000 in prizes</span>
       </div>
     </div>
@@ -302,18 +302,13 @@ const CONFIG = {
 
 const $ = (id) => document.getElementById(id);
 const money = (n) => "$" + Number(n).toLocaleString("en-US");
-let price = CONFIG.price, left = 99, players = [], qty = 1;
-const PREVIEW_PLAYERS = ["Max Boxer", "Michael Chin", "Owen Huber", "Zachary Liu", "Lukas Mariano", "Dylan McGeough", "Yadi Molina", "Matthew Pineda", "Jayden Williams"].map((name) => ({ name, left: 11 }));
+let price = CONFIG.price, left = 100, qty = 1;
+const PREVIEW_PLAYERS = ["Max Boxer", "Michael Chin", "Owen Huber", "Zachary Liu", "Lukas Mariano", "Dylan McGeough", "Yadi Molina", "Matthew Pineda", "Jayden Williams"];
 
 $("contact").textContent = CONFIG.contact || "Ask any Hammers coach or team parent.";
 
-function playerLeft() {
-  const p = players.find((x) => x.name === $("player").value);
-  return p ? p.left : 0;
-}
-
 function renderQty() {
-  const cap = Math.max(1, playerLeft());
+  const cap = Math.max(1, left);
   if (qty > cap) qty = cap;
   if (qty < 1) qty = 1;
   $("qty").textContent = qty;
@@ -323,29 +318,24 @@ function renderQty() {
 }
 $("minus").onclick = () => { qty--; renderQty(); };
 $("plus").onclick = () => { qty++; renderQty(); };
-$("player").addEventListener("change", renderQty);
 
 function renderLeft() {
   $("chip-left").textContent = left === 1 ? "1 box left" : left + " boxes left";
 }
 
 function setPlayers(list) {
-  players = list;
   const sel = $("player");
   const keep = sel.value;
   sel.innerHTML = "";
   const ph = document.createElement("option");
   ph.value = ""; ph.textContent = "Choose a player"; ph.disabled = true; ph.selected = true;
   sel.appendChild(ph);
-  list.forEach((p) => {
+  list.forEach((name) => {
     const o = document.createElement("option");
-    o.value = p.name;
-    o.textContent = p.left > 0 ? p.name + " (" + p.left + " left)" : p.name + " (sold out)";
-    o.disabled = p.left <= 0;
+    o.value = o.textContent = name;
     sel.appendChild(o);
   });
-  const still = list.find((p) => p.name === keep && p.left > 0);
-  if (still) sel.value = keep;
+  if (keep && list.includes(keep)) sel.value = keep;
 }
 
 function closeSignups() {
@@ -436,7 +426,7 @@ $("signup").addEventListener("submit", async (ev) => {
   let res;
   try {
     if (!CONFIG.apiUrl) {
-      res = { ok: true, reference: "HAM-PREVIEW", amount: qty * price, boxes: qty, player: data.player, left: playerLeft() - qty };
+      res = { ok: true, reference: "HAM-PREVIEW", amount: qty * price, boxes: qty, player: data.player, left: left - qty };
     } else {
       const r = await fetch(CONFIG.apiUrl, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(data) });
       res = await r.json();
@@ -447,9 +437,7 @@ $("signup").addEventListener("submit", async (ev) => {
   btn.disabled = false; btn.textContent = "Reserve my boxes";
   if (!res.ok) { err.textContent = res.error || "Something went wrong. Please try again."; loadStatus(); return; }
 
-  left -= res.boxes; renderLeft();
-  const pl = players.find((x) => x.name === res.player); if (pl) pl.left = res.left;
-  setPlayers(players);
+  left = res.left; renderLeft(); renderQty();
   $("done-ref").textContent = "Reference " + res.reference + " · " + res.boxes + (res.boxes === 1 ? " box" : " boxes") + " for " + res.player;
   $("done-amount").textContent = money(res.amount);
   const steps = $("pay-steps"); steps.innerHTML = "";
